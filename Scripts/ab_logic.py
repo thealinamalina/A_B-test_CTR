@@ -74,7 +74,6 @@ def denormalize_for_display(groups, sessions):
     Автор:
         Лукьянова Алина Павловна
     """
-    # Добавляем название группы
     sessions_with_group = sessions.merge(groups,
                                          on='group_id',
                                          how='left')
@@ -237,7 +236,7 @@ def clean_misassignments(df):
         Лукьянова Алина Павловна
     """
     if 'landing_page' not in df.columns:
-        return df, 0
+        return df.copy(), 0
     correct = (
         ((df['group'] == 'control') & (df['landing_page'] == 'old_page')) |
         ((df['group'] == 'treatment') & (df['landing_page'] == 'new_page'))
@@ -247,4 +246,4 @@ def clean_misassignments(df):
         df_clean = df[correct].reset_index(drop=True)
     else:
         df_clean = df.copy()
-    return df_clean, removed
+    return df_clean, int(removed)

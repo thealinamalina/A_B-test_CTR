@@ -18,7 +18,30 @@ from ab_logic import denormalize_for_display
 
 
 class ReferencesTab:
+    """
+    Вкладка «Справочники» для управления справочниками.
+
+    Обеспечивает CRUD-операции (создание, чтение, обновление, удаление)
+    и бинарное сохранение/загрузку справочников.
+
+    Автор:
+        Лукьянова Алина Павловна
+    """
     def __init__(self, parent, app):
+        """
+        Инициализация вкладки справочников.
+
+        Параметры:
+            parent: tk.Widget - родительский контейнер.
+            app: ABTestApp - ссылка на объект приложения.
+
+        Возвращаемое значение:
+            None
+
+        Автор:
+            Лукьянова Алина Павловна
+        """
+
         self.app = app
         self.frame = ctk.CTkFrame(parent, fg_color="#f5f6fa")
         self.current_ref_name = "users"
@@ -31,10 +54,21 @@ class ReferencesTab:
         self._refresh()
 
     def _build_toolbar(self):
+        """
+        Создаёт панель инструментов для управления справочниками.
+
+        Параметры:
+            None
+
+        Возвращаемое значение:
+            None
+
+        Автор:
+            Лукьянова Алина Павловна
+        """
         toolbar = ctk.CTkFrame(self.frame,
                                fg_color="#f5f6fa")
         toolbar.pack(fill=tk.X, padx=10, pady=6)
-
         ctk.CTkLabel(toolbar,
                      text="Справочник:",
                      font=(self.app.font_family, 12)).pack(side=tk.LEFT)
@@ -47,7 +81,6 @@ class ReferencesTab:
         )
         self.ref_combo.pack(side=tk.LEFT, padx=6)
         self.ref_combo.set("users")
-
         ctk.CTkButton(toolbar,
                       text="Сохранить в бинарный файл",
                       command=self._save_binary).pack(side=tk.LEFT, padx=4)
@@ -64,6 +97,18 @@ class ReferencesTab:
                       command=self._delete_record).pack(side=tk.LEFT, padx=4)
 
     def _build_table(self):
+        """
+        Создаёт таблицу Treeview для отображения записей справочника.
+
+        Параметры:
+            None
+
+        Возвращаемое значение:
+            None
+
+        Автор:
+            Лукьянова Алина Павловна
+        """
         table_frame = ctk.CTkFrame(self.frame, fg_color="white",
                                    border_width=1, border_color="#dcdde1")
         table_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
@@ -71,10 +116,39 @@ class ReferencesTab:
         self.tree = build_treeview(table_frame)
 
     def _on_ref_change(self, choice):
+        """
+        Обрабатывает изменение выбранного справочника в выпадающем списке.
+        Обновляет внутреннее имя текущего справочника и перезагружает
+        отображаемые данные.
+
+        Параметры:
+            choice: str - название выбранного справочника ('users' или 'groups').
+
+        Возвращаемое значение:
+            None
+
+        Автор:
+            Лукьянова Алина Павловна
+        """
         self.current_ref_name = choice
         self._refresh()
 
     def _refresh(self):
+        """
+        Обновляет содержимое таблицы в соответствии с текущим справочником.
+
+        Загружает данные из app.users или app.groups, копирует их в
+        current_ref_df и перерисовывает таблицу через fill_treeview.
+
+        Параметры:
+            None
+
+        Возвращаемое значение:
+            None
+
+        Автор:
+            Лукьянова Алина Павловна
+        """
         if self.current_ref_name == "users":
             self.current_ref_df = self.app.users.copy() \
                 if self.app.users is not None else pd.DataFrame()
@@ -85,6 +159,21 @@ class ReferencesTab:
         fill_treeview(self.tree, self.current_ref_df)
 
     def _save_binary(self):
+        """
+        Сохраняет текущий справочник в бинарный файл формата pickle.
+
+        Открывает диалог сохранения с предложением имени файла по умолчанию.
+        При успешном сохранении показывает информационное сообщение.
+
+        Параметры:
+            None
+
+        Возвращаемое значение:
+            None
+
+        Автор:
+            Лукьянова Алина Павловна
+        """
         if self.current_ref_df.empty:
             messagebox.showwarning("Нет данных",
                                    "Справочник пуст, сохранять нечего.")
@@ -100,6 +189,18 @@ class ReferencesTab:
                 f"Справочник '{self.current_ref_name}' сохранён в {path}")
 
     def _load_binary(self):
+        """
+        Загружает справочник из бинарного файла формата pickle.
+
+        Параметры:
+            None
+
+        Возвращаемое значение:
+            None
+
+        Автор:
+            Лукьянова Алина Павловна
+        """
         path = filedialog.askopenfilename(
             filetypes=[("Pickle files", "*.pkl")])
         if not path:
@@ -120,6 +221,18 @@ class ReferencesTab:
                             f"Справочник '{self.current_ref_name}' загружен.")
 
     def _add_record(self):
+        """
+        Добавляет новую запись в выбранный справочник.
+
+        Параметры:
+            None
+
+        Возвращаемое значение:
+            None
+
+        Автор:
+            Лукьянова Алина Павловна
+        """
         if self.current_ref_name == "users":
             new_id = simpledialog.askinteger("Добавить пользователя",
                                              "Введите новый user_id:",
@@ -165,6 +278,18 @@ class ReferencesTab:
                 self.app.data_tab.update_table()
 
     def _edit_record(self):
+        """
+        Редактирует выбранную запись в справочнике.
+
+        Параметры:
+            None
+
+        Возвращаемое значение:
+            None
+
+        Автор:
+            Лукьянова Алина Павловна
+        """
         selected = self.tree.selection()
         if not selected:
             messagebox.showwarning("Нет выбора",
@@ -222,6 +347,18 @@ class ReferencesTab:
                 self.app.data_tab.update_table()
 
     def _delete_record(self):
+        """
+        Удаляет выбранную запись из справочника.
+
+        Параметры:
+            None
+
+        Возвращаемое значение:
+            None
+
+        Автор:
+            Лукьянова Алина Павловна
+        """
         selected = self.tree.selection()
         if not selected:
             messagebox.showwarning("Нет выбора",

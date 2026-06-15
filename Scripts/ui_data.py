@@ -9,7 +9,7 @@
 """
 import customtkinter as ctk
 import tkinter as tk
-from tkinter import ttk  # Добавляем для Treeview, Scrollbar
+from tkinter import ttk, messagebox  # Добавляем для Treeview, Scrollbar
 
 
 def build_treeview(parent):
@@ -111,6 +111,79 @@ class DataTab:
         self._build_table()
         self._build_info_bar()
 
+    def _clean_data_now(self):
+        """
+        Очищает уже загруженные данные от несоответствий
+        группы и landing_page.
+
+        Параметры:
+            None
+
+        Возвращаемое значение:
+            None
+
+        Автор:
+            Лукьянова Алина Павловна
+        """
+        if self.app.data is None or self.app.data.empty:
+            messagebox.showwarning(
+                "Нет данных",
+                "Сначала загрузите данные (CSV)."
+            )
+            return
+        from ab_logic import clean_misassignments
+        confirm = messagebox.askyesno(
+            "Очистка данных",
+            "Вы уверены? Это удалит все записи, где группа не соответствует странице.\n"
+            "Это действие нельзя отменить."
+        )
+        if not confirm:
+            return
+        df_clean, removed = clean_misassignments(self.app.data)
+        if removed == 0:
+            messagebox.showinfo(
+                "Очистка",
+                "Несоответствий не найдено. Данные не изменены."
+            )
+            return
+        self.app.data = df_clean
+        try:
+            from ab_logic import normalize_to_3nf, denormalize_for_display
+            (self.app.users,
+                self.app.groups,
+                self.app.sessions) = normalize_to_3nf(self.app.data)
+            self.app.current_df = denormalize_for_display(
+                self.app.groups,
+                self.app.sessions)
+            self.app.full_df = self.app.current_df.copy()
+        except Exception as e:
+            messagebox.showerror("Ошибка нормализации", str(e))
+            return
+        self._refresh_all_ui()
+        messagebox.showinfo(
+            "Очистка завершена",
+            f"Удалено записей с несоответствиями: {removed}\n"
+            f"Осталось записей: {len(self.app.data)}"
+        )
+
+    def _refresh_all_ui(self):
+        """
+        Обновляет все вкладки после изменения данных.
+
+        Параметры:
+            None
+
+        Возвращаемое значение:
+            None
+
+        Автор:
+            Лукьянова Алина Павловна
+        """
+        self.update_table()
+        if hasattr(self.app, 'analysis_tab'):
+            self.app.analysis_tab.update_analysis()
+        self.app.set_status(f"Данные очищены | {len(self.app.data)} записей")
+
     def _build_toolbar(self):
         """
         Создаёт панель инструментов с заголовком и элементами фильтрации.
@@ -149,29 +222,25 @@ class DataTab:
             command=self._reset_filter,
         ).pack(side=tk.LEFT, padx=4)
 
-        # Кнопка для очистки несоответствий
-        self.clean_var = tk.IntVar(value=0)
-        self.clean_check = ctk.CTkCheckBox(
+        # Кнопка «Очистить несоответствия»
+        ctk.CTkButton(
             toolbar,
-            text="Очистить от несоответствий (группа-страница)",
-            variable=self.clean_var,
-            onvalue=1,
-            offvalue=0
-        )
-        self.clean_check.pack(side=tk.LEFT, padx=10)
+            text="🧹 Очистить несоответствия",
+            command=self._clean_data_now,
+            fg_color="#e67e22",
+            hover_color="#d35400"
+        ).pack(side=tk.LEFT, padx=10)
  
         # Кнопка «Загрузить CSV»
         ctk.CTkButton(
             toolbar,
             text="📂  Загрузить CSV",
-            command=self._load_csv_with_clean_option,
+            command=self._load_csv,
         ).pack(side=tk.RIGHT, padx=4)
 
-    def _load_csv_with_clean_option(self):
+    def _load_csv(self):
         """Вызывает app.load_csv с параметром очистки."""
-        do_clean = self.clean_var.get() == 1
-        print("DEBUG: clean_var =", self.clean_var.get(), "do_clean =", do_clean)
-        self.app.load_csv(do_clean=do_clean)
+        self.app.load_csv(do_clean=False)
 
     def _build_table(self):
         """

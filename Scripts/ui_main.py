@@ -33,6 +33,25 @@ def load_config(path="config.ini"):
     """
     cfg = configparser.ConfigParser()
     cfg.read(path, encoding="utf-8")
+    for section in list(cfg.sections()):
+        if section.lower() == "interface" and section != "Interface":
+            if "Interface" not in cfg:
+                cfg["Interface"] = {}
+            for key, value in cfg[section].items():
+                cfg["Interface"][key] = value
+            cfg.remove_section(section)
+        elif section.lower() == "paths" and section != "Paths":
+            if "Paths" not in cfg:
+                cfg["Paths"] = {}
+            for key, value in cfg[section].items():
+                cfg["Paths"][key] = value
+            cfg.remove_section(section)
+        elif section.lower() == "window" and section != "Window":
+            if "Window" not in cfg:
+                cfg["Window"] = {}
+            for key, value in cfg[section].items():
+                cfg["Window"][key] = value
+            cfg.remove_section(section)
     return cfg
 
 
@@ -46,8 +65,9 @@ def ensure_dirs(cfg):
             cfg (configparser.ConfigParser): объект конфигурации.
         Возвращает: нет
     """
+    paths = cfg["Paths"] if "Paths" in cfg else {}
     for key in ("data_dir", "graphics_dir", "output_dir"):
-        folder = cfg.get("Paths", key, fallback=key)
+        folder = paths.get(key, key)
         os.makedirs(folder, exist_ok=True)
 
 
@@ -98,6 +118,16 @@ class ABTestApp:
     """
 
     def __init__(self):
+        """
+        Инициализация приложения: чтение конфигурации,
+        построение интерфейса, загрузка демо-данных.
+
+        Параметры: нет
+        Возвращает: нет
+
+        Автор:
+            Галашина Жанна Ивановна
+        """
         # Настройка внешнего вида CustomTkinter
         ctk.set_appearance_mode("light")  # "light", "dark", "system"
         ctk.set_default_color_theme("blue")
@@ -149,9 +179,10 @@ class ABTestApp:
 
     def _setup_window(self):
         """Задаёт заголовок, размер и минимальный размер окна."""
-        title = "A/B-тестирование — анализ кликабельности (CTR)"
-        width = 1280
-        height = 750
+        window_cfg = self.cfg["Window"] if "Window" in self.cfg else {}
+        title = window_cfg.get("title", "A/B-тестирование — анализ кликабельности (CTR)")
+        width = int(window_cfg.get("width", 1280))
+        height = int(window_cfg.get("height", 750))
         self.root.title(title)
         self.root.geometry(f"{width}x{height}")
         self.root.minsize(900, 600)
@@ -358,7 +389,6 @@ class ABTestApp:
             do_clean (bool): если True, удаляются записи с
             несоответствием group-landing_page.
         """
-        print("DEBUG: load_csv called, do_clean =", do_clean)
         path = filedialog.askopenfilename(
             title="Открыть CSV-файл",
             filetypes=[("CSV файлы", "*.csv"),
@@ -368,28 +398,20 @@ class ABTestApp:
             return
         try:
             df = pd.read_csv(path)
-            if 'landing_page' in df.columns:
-                print("DEBUG: landing_page exists")
-                print("DEBUG: unique landing_page values:", df['landing_page'].unique())
-            else:
-                print("DEBUG: landing_page NOT found")
 
             # Если нет колонки views, то создаём со значением 1
             if 'views' not in df.columns:
                 df['views'] = 1
-
             # Очистка от несоответствий (если запрошено)
             removed = 0
             if do_clean:
                 from ab_logic import clean_misassignments
                 df_clean, removed = clean_misassignments(df)
-                print("DEBUG: removed =", removed)
             else:
                 df_clean = df.copy()
                 removed = 0
 
             if removed:
-                print("DEBUG: about to show warning, removed =", removed)
                 msg = f"Удалено {removed} записей с несоответствием группы и показанной страницы."
                 messagebox.showwarning("Очистка данных", msg)
 
